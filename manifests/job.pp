@@ -107,6 +107,21 @@ define restic::job (
     default => 'path',
   }
 
+  # Normalise the optional params to the concrete (non-optional) shapes the
+  # template expects; the unused mode's value is an empty placeholder.
+  $command_argv = $stdin_mode ? {
+    true    => $command,
+    default => [],
+  }
+  $paths_list = $path_mode ? {
+    true    => $paths,
+    default => [],
+  }
+  $stdin_fn = $stdin_filename =~ String ? {
+    true    => $stdin_filename,
+    default => '',
+  }
+
   $forget_flags = $keep.map |$rule, $count| { "--keep-${rule} ${count}" }
 
   # A whole crontab string (as commonly stored in Hiera) overrides the discrete
@@ -136,9 +151,9 @@ define restic::job (
         restic_run     => $restic_run,
         repo_envfile   => $env_file,
         mode           => $mode,
-        command        => pick($command, []),
-        stdin_filename => pick($stdin_filename, ''),
-        paths          => pick($paths, []),
+        command        => $command_argv,
+        stdin_filename => $stdin_fn,
+        paths          => $paths_list,
         pre_command    => $pre_command,
         post_command   => $post_command,
         tag            => $snapshot_tag,

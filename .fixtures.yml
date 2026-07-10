@@ -12,3 +12,5 @@ fixtures:
     systemd:
       repo: "puppet/systemd"
       ref: "7.1.0"
+    cron_core:
+      repo: "puppetlabs/cron_core"
