@@ -1,0 +1,49 @@
+<%- | String            $restic_run,
+      String            $repo_envfile,
+      Enum['stdin', 'path'] $mode,
+      Array[String]     $command,
+      String            $stdin_filename,
+      Array[String]     $paths,
+      Optional[String]  $pre_command,
+      Optional[String]  $post_command,
+      String            $tag,
+      String            $lockfile,
+      Array[String]     $forget_flags,
+| -%>
+#!/usr/bin/env bash
+# MANAGED BY PUPPET (restic::job) — <%= $tag %>
+set -euo pipefail
+
+# etcdctl/etcdutl and the archive-installed restic live under /usr/local/bin.
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:${PATH:-}"
+
+# Serialise against the repository prune (shared lock, fd 9).
+exec 9>'<%= $lockfile %>'
+if ! flock -w 600 9; then
+  echo "restic backup <%= $tag %>: repository lock busy, skipping" >&2
+  exit 1
+fi
+
+<% if $post_command { -%>
+# Cleanup runs on ANY exit; set before the pre hook so partial state is removed.
+cleanup() { <%= $post_command %>; }
+trap cleanup EXIT
+<% } -%>
+<% if $pre_command { -%>
+# Pre-backup hook (failure aborts the backup).
+<%= $pre_command %>
+<% } -%>
+<% if $mode == 'stdin' { -%>
+# restic runs the dump itself; a non-zero dump aborts the snapshot.
+'<%= $restic_run %>' '<%= $repo_envfile %>' backup --stdin-from-command \
+  --stdin-filename '<%= $stdin_filename %>' \
+  --tag '<%= $tag %>' \
+  -- <%= ($command.map |$arg| { "'${arg}'" }).join(' ') %>
+<% } else { -%>
+'<%= $restic_run %>' '<%= $repo_envfile %>' backup \
+  --tag '<%= $tag %>' \
+  <%= ($paths.map |$p| { "'${p}'" }).join(' ') %>
+<% } -%>
+
+# Per-tag retention; prune runs separately (repository owns the prune schedule).
+'<%= $restic_run %>' '<%= $repo_envfile %>' forget --tag '<%= $tag %>' <%= $forget_flags.join(' ') %>
