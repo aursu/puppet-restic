@@ -96,30 +96,18 @@ define restic::job (
   # Exactly one of stdin mode ($command) or path mode ($paths).
   $stdin_mode = $command =~ Array[String]
   $path_mode  = $paths =~ Array[String]
+
   if $stdin_mode == $path_mode {
     fail("restic::job[${title}] requires exactly one of \$command (stdin mode) or \$paths (path mode)")
   }
+
   if $stdin_mode and !$stdin_filename {
     fail("restic::job[${title}] stdin mode requires \$stdin_filename")
   }
+
   $mode = $stdin_mode ? {
     true    => 'stdin',
     default => 'path',
-  }
-
-  # Normalise the optional params to the concrete (non-optional) shapes the
-  # template expects; the unused mode's value is an empty placeholder.
-  $command_argv = $stdin_mode ? {
-    true    => $command,
-    default => [],
-  }
-  $paths_list = $path_mode ? {
-    true    => $paths,
-    default => [],
-  }
-  $stdin_fn = $stdin_filename =~ String ? {
-    true    => $stdin_filename,
-    default => '',
   }
 
   $forget_flags = $keep.map |$rule, $count| { "--keep-${rule} ${count}" }
@@ -151,9 +139,9 @@ define restic::job (
         restic_run     => $restic_run,
         repo_envfile   => $env_file,
         mode           => $mode,
-        command        => $command_argv,
-        stdin_filename => $stdin_fn,
-        paths          => $paths_list,
+        command        => $command,
+        stdin_filename => $stdin_filename,
+        paths          => $paths,
         pre_command    => $pre_command,
         post_command   => $post_command,
         tag            => $snapshot_tag,
