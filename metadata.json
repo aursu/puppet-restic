@@ -1,6 +1,6 @@
 {
   "name": "aursu-restic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "aursu",
   "summary": "Install restic and define encrypted backup repositories and jobs",
   "license": "Apache-2.0",

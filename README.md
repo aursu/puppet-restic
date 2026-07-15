@@ -27,6 +27,12 @@ This module owns the generic, reusable restic mechanics:
   snapshot) or **path mode** (`restic backup <paths>`), with optional
   `pre_command` / `post_command` (cleanup) hooks, per-tag `forget`, and a cron
   or systemd-timer schedule.
+* **`restic::copy`** — copies snapshots from a local (T1) repository into a
+  remote/S3 (T2) repository with `restic copy` for an offsite tier. The source
+  data is not re-read; the destination is a deduplicated, still-encrypted copy.
+  It inits the destination with `--copy-chunker-params` (so cross-repo dedup
+  works), runs `restic copy` on a schedule, and applies destination retention
+  via `forget`.
 
 Prune is intentionally separate from each job's `forget`: prune takes an
 exclusive, expensive repository lock, so it runs once on its own schedule while
@@ -75,10 +81,40 @@ restic::job { 'etcd':
 }
 ```
 
+### Offsite copy (two-tier: local T1 → S3 T2)
+
+The source data is dumped once into a local `restic::repository` (T1); a daily
+`restic::copy` mirrors it into a remote/S3 `restic::repository` (T2). The
+destination repository is declared with `init => false` — `restic::copy` owns
+its creation so it can init with `--copy-chunker-params`.
+
+```puppet
+restic::repository { 'mariadb':                       # T1 (local, hourly source)
+  repository => '/share/backups/restic/db01/mariadb',
+  password   => $repo_password,
+}
+
+restic::repository { 'mariadb-dr':                    # T2 (S3) — NOTE init => false
+  repository => 's3:https://s3.example.com/prod-backup/db01/mariadb',
+  password   => $repo_password,
+  env        => {
+    'AWS_ACCESS_KEY_ID'     => $key_id,
+    'AWS_SECRET_ACCESS_KEY' => $secret,
+  },
+  init       => false,
+}
+
+restic::copy { 'mariadb-dr':
+  source_repository => 'mariadb',
+  dest_repository   => 'mariadb-dr',
+  # keep => { 'daily' => 5 } is the default
+}
+```
+
 ## Reference
 
-See the in-manifest `@param` documentation on `restic`, `restic::repository`
-and `restic::job`.
+See the in-manifest `@param` documentation on `restic`, `restic::repository`,
+`restic::job` and `restic::copy`.
 
 ## Limitations
 

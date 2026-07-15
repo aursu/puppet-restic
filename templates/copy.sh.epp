@@ -1,0 +1,55 @@
+<%- | String        $source_envfile,
+      String        $dest_envfile,
+      String        $lockfile,
+      String        $tag_label,
+      Array[String] $copy_flags,
+      Array[String] $forget_flags,
+| -%>
+#!/usr/bin/env bash
+# MANAGED BY PUPPET (restic::copy) — <%= $tag_label %>
+#
+# Copies snapshots from a local (T1) restic repository into a remote (T2/S3)
+# restic repository, preserving deduplication and encryption (the source data
+# is NOT re-read). Usage: this-script [init|run]   (default: run)
+#
+#   init  `restic init --copy-chunker-params` so the destination's chunker
+#         parameters match the source (MUST — otherwise cross-repo dedup is lost).
+#   run   `restic copy` source→dest, then a per-policy `forget` on the destination.
+set -euo pipefail
+
+# The archive-installed restic lives under /usr/local/bin.
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:${PATH:-}"
+
+action="${1:-run}"
+
+# Destination repository (RESTIC_REPOSITORY / RESTIC_PASSWORD / backend creds).
+set -a
+# shellcheck disable=SC1090
+source '<%= $dest_envfile %>'
+set +a
+
+# Source repository, mapped onto restic's RESTIC_FROM_* without clobbering the
+# destination vars. Read from the source repo's own env file (no duplicated
+# credentials); supports either a shared or a distinct source password.
+RESTIC_FROM_REPOSITORY="$(set -a; source '<%= $source_envfile %>'; printf '%s' "${RESTIC_REPOSITORY}")"
+RESTIC_FROM_PASSWORD="$(set -a; source '<%= $source_envfile %>'; printf '%s' "${RESTIC_PASSWORD}")"
+export RESTIC_FROM_REPOSITORY RESTIC_FROM_PASSWORD
+
+if [ "${action}" = init ]; then
+  # Idempotency is enforced by the caller (`restic cat config` guard); this runs
+  # only when the destination repository does not yet exist.
+  exec restic init --from-repo "${RESTIC_FROM_REPOSITORY}" --copy-chunker-params
+fi
+
+# Serialise against the destination repository prune (shared lock, fd 9).
+exec 9>'<%= $lockfile %>'
+if ! flock -w 3600 9; then
+  echo "restic copy <%= $tag_label %>: repository lock busy, skipping" >&2
+  exit 1
+fi
+
+restic copy --from-repo "${RESTIC_FROM_REPOSITORY}"<% unless $copy_flags.empty { %> <%= $copy_flags.join(' ') %><% } %>
+
+# Retention on the destination (T2 DR copy); prune (space reclaim) runs on the
+# destination repository's own schedule.
+restic forget <%= $forget_flags.join(' ') %>
