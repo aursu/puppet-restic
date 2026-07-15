@@ -102,12 +102,32 @@ define restic::repository (
   }
 
   if $init {
-    # `restic cat config` succeeds only when the repo exists AND the password
-    # matches, so it is a safe idempotency guard for init.
-    exec { "restic-init-${title}":
-      command => "${restic_run} ${env_file} init",
-      unless  => "${restic_run} ${env_file} cat config",
-      require => $init_require,
+    # Idempotency guard for init.
+    #
+    # For a LOCAL (file-based) repository, use the presence of the repo `config`
+    # file as a deterministic marker. This is deliberately NOT `restic cat
+    # config`: that guard opens the repository, which it shares with the running
+    # backup jobs, so it can return non-zero *transiently* (a lock/IO race while a
+    # backup is mid-write). A transient miss would then run `init` on an existing
+    # repo, which hard-fails ("config file already exists") and cascades to skip
+    # every job + copy that requires this repository. A filesystem check touches
+    # neither restic nor a lock.
+    #
+    # A REMOTE (s3:, …) repository has no local path, so fall back to `restic cat
+    # config` (which also verifies the password matches).
+    if $repository =~ Stdlib::Absolutepath {
+      exec { "restic-init-${title}":
+        command => "${restic_run} ${env_file} init",
+        creates => "${repository}/config",
+        require => $init_require,
+      }
+    }
+    else {
+      exec { "restic-init-${title}":
+        command => "${restic_run} ${env_file} init",
+        unless  => "${restic_run} ${env_file} cat config",
+        require => $init_require,
+      }
     }
   }
 

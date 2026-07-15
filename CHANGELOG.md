@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 0.2.1
+
+**Bugfixes**
+
+* `restic::repository` now guards `init` on a **local** (file-based) repository with a `creates => "<repository>/config"` filesystem check instead of `unless => restic cat config`. The `cat config` guard opens the repository, which is shared with running backup jobs, so it could return non-zero *transiently* (a lock/IO race while a backup was mid-write); that transient miss then ran `init` on the existing repo, which hard-fails with `config file already exists` and cascades to skip every dependent job and copy. The filesystem marker touches neither restic nor a lock. Remote (`s3:`) repositories have no local path and keep the `cat config` guard.
+
 ## Release 0.2.0
 
 **Features**

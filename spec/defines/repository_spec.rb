@@ -34,8 +34,10 @@ describe 'restic::repository' do
         it {
           is_expected.to contain_exec('restic-init-mariadb')
             .with_command('/opt/backup/restic-run /etc/restic/mariadb.env init')
-            .with_unless('/opt/backup/restic-run /etc/restic/mariadb.env cat config')
+            .with_creates('/backups/restic/mariadb/config')
         }
+        # local repo uses the deterministic config-file marker, not `cat config`
+        it { is_expected.to contain_exec('restic-init-mariadb').without_unless }
 
         it { is_expected.to contain_file('/opt/backup/restic-mariadb-prune.sh').with_mode('0750') }
         it {
@@ -72,7 +74,12 @@ describe 'restic::repository' do
         it { is_expected.to compile.with_all_deps }
         it { is_expected.not_to contain_exec('restic-mkdir-mariadb') }
         it { is_expected.not_to contain_file('s3:https://s3.example.com/bucket/mariadb') }
-        it { is_expected.to contain_exec('restic-init-mariadb') }
+        # remote repo has no local path -> fall back to the `cat config` guard
+        it {
+          is_expected.to contain_exec('restic-init-mariadb')
+            .with_unless('/opt/backup/restic-run /etc/restic/mariadb.env cat config')
+            .without_creates
+        }
       end
 
       context 'with systemd-timer prune' do
