@@ -41,6 +41,7 @@ describe 'restic::copy' do
         }
 
         # sources the two repository env files
+        it { is_expected.to contain_file('/opt/backup/copy-mariadb-dr.sh').with_content(%r{RESTIC_CACHE_DIR="\$\{RESTIC_CACHE_DIR:-/var/cache/restic\}"}) }
         it { is_expected.to contain_file('/opt/backup/copy-mariadb-dr.sh').with_content(%r{source '/etc/restic/mariadb-dr\.env'}) }
         it { is_expected.to contain_file('/opt/backup/copy-mariadb-dr.sh').with_content(%r{RESTIC_FROM_REPOSITORY=.*source '/etc/restic/mariadb\.env'}) }
         it { is_expected.to contain_file('/opt/backup/copy-mariadb-dr.sh').with_content(%r{restic init --from-repo .* --copy-chunker-params}) }

@@ -29,6 +29,7 @@ describe 'restic' do
         }
 
         it { is_expected.to contain_file('/opt/backup/restic-run').with_content(%r{exec restic "\$@"}) }
+        it { is_expected.to contain_file('/opt/backup/restic-run').with_content(%r{RESTIC_CACHE_DIR="\$\{RESTIC_CACHE_DIR:-/var/cache/restic\}"}) }
 
         it {
           is_expected.to contain_archive('restic-0.19.1')

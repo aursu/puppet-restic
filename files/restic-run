@@ -28,6 +28,11 @@ fi
 # restic may be the packaged /usr/bin/restic or the archive /usr/local/bin/restic.
 export PATH="/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 
+# restic needs a cache directory for remote (S3) backends. Under a Puppet exec
+# there is no $HOME/$XDG_CACHE_HOME, so default it explicitly. Set before sourcing
+# so a repo env file (restic::repository cache_dir) can still override it.
+export RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-/var/cache/restic}"
+
 set -a
 # shellcheck disable=SC1090
 source "$envfile"

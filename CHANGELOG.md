@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 0.2.2
+
+**Bugfixes**
+
+* The `restic-run` wrapper and the `restic::copy` script now default `RESTIC_CACHE_DIR` to `/var/cache/restic` (overridable via the repo env file / `restic::repository`'s `cache_dir`). restic requires a cache directory for remote (S3) backends; when run from a Puppet `exec` there is no `$HOME`/`$XDG_CACHE_HOME`, so `restic::copy`'s init/copy against an S3 destination aborted with `unable to locate cache directory`. Local-only backups were unaffected.
+
 ## Release 0.2.1
 
 **Bugfixes**

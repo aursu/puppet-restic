@@ -20,6 +20,11 @@ set -euo pipefail
 # The archive-installed restic lives under /usr/local/bin.
 export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:${PATH:-}"
 
+# restic needs a cache directory for the S3 destination; under a Puppet exec there
+# is no $HOME/$XDG_CACHE_HOME, so default it explicitly (the dest env file may
+# override via restic::repository's cache_dir).
+export RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-/var/cache/restic}"
+
 action="${1:-run}"
 
 # Destination repository (RESTIC_REPOSITORY / RESTIC_PASSWORD / backend creds).
