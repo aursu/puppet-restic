@@ -15,7 +15,8 @@ and backup jobs with Puppet.
 This module owns the generic, reusable restic mechanics:
 
 * **`restic`** — installs restic (a pinned single binary from the upstream
-  GitHub release by default, or a distro package) and installs the shared
+  GitHub release, verified against a pinned SHA-256 digest, by default; or a
+  distro package) and installs the shared
   `restic-run` wrapper (`restic-run <repo-env-file> <restic-args…>` sources the
   repository env file then execs restic).
 * **`restic::repository`** — writes a `0600` repository environment file
@@ -120,3 +121,9 @@ See the in-manifest `@param` documentation on `restic`, `restic::repository`,
 
 Targets systemd-based Linux (Rocky, Ubuntu). The `archive` install method
 requires `bunzip2` (bzip2) on the target.
+
+The `archive` install method will only install a release asset whose digest is
+known: either supplied as `restic::checksum`, or present in `restic::checksums`
+(keyed by asset filename). The module ships digests for the pinned default
+version only, so **changing `restic::version` requires adding the digests for
+the new assets**; the class fails rather than installing an unverified binary.

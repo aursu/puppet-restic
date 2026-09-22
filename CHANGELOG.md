@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 0.3.0
+
+**Bugfixes**
+
+* The `archive` install method fetched the restic binary from the upstream GitHub release with no `checksum`, `checksum_type` or `checksum_url`, so `puppet/archive` performed no integrity verification whatsoever: whatever the endpoint returned was decompressed and installed as a root-owned executable in `/usr/local/bin` on every managed host. A truncated download, a corrupted cache or a substituted asset would all have been installed silently. The download is now verified against a pinned SHA-256 digest, and the class **fails rather than installing an unverified binary** when no digest is known for the requested version and architecture.
+
+**Features**
+
+* Added `restic::checksum` (explicit digest, overrides the lookup), `restic::checksums` (known-good digests keyed by release asset filename) and `restic::checksum_type` (default `sha256`). Digests for the pinned default version 0.19.1, `linux_amd64` and `linux_arm64`, ship in the module's data, so `include restic` needs no additional configuration. Bumping `restic::version` now requires adding the matching digests - that is deliberate, and it is what makes the pin a pin.
+
 ## Release 0.2.2
 
 **Bugfixes**

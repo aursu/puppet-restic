@@ -37,6 +37,15 @@ describe 'restic' do
             .with(extract: false)
         }
 
+        # The digest comes from the module's own data, so an unconfigured
+        # `include restic` still verifies what it downloads.
+        it {
+          is_expected.to contain_archive('restic-0.19.1')
+            .with(checksum: 'f415415624dcc452f2a02b8c33641791a8c6d6d3b65bbb3543fcf9a25151585c')
+            .with(checksum_type: 'sha256')
+            .with(checksum_verify: true)
+        }
+
         it { is_expected.to contain_exec('restic-install-0.19.1').that_requires('Archive[restic-0.19.1]') }
 
         it {
@@ -48,12 +57,34 @@ describe 'restic' do
         it { is_expected.not_to contain_package('restic') }
       end
 
-      context 'with a custom version' do
-        let(:params) { { 'version' => '0.18.0' } }
+      context 'with a custom version and an explicit checksum' do
+        let(:params) { { 'version' => '0.18.0', 'checksum' => 'a' * 64 } }
 
         it { is_expected.to compile.with_all_deps }
-        it { is_expected.to contain_archive('restic-0.18.0') }
+        it { is_expected.to contain_archive('restic-0.18.0').with_checksum('a' * 64) }
         it { is_expected.to contain_file('/usr/local/bin/restic').with_target('/usr/local/bin/restic-0.18.0') }
+      end
+
+      context 'with a custom version whose digest is supplied through checksums' do
+        let(:params) do
+          {
+            'version' => '0.18.0',
+            'checksums' => { 'restic_0.18.0_linux_amd64.bz2' => 'b' * 64 },
+          }
+        end
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.to contain_archive('restic-0.18.0').with_checksum('b' * 64) }
+      end
+
+      # The point of the guard: an unverified binary is never installed, even
+      # if that means the run fails.
+      context 'with a custom version and no digest for it' do
+        let(:params) { { 'version' => '0.18.0' } }
+
+        it {
+          is_expected.to compile.and_raise_error(%r{no sha256 digest known for restic_0.18.0_linux_amd64.bz2})
+        }
       end
 
       context 'with package install' do

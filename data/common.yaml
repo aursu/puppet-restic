@@ -1,1 +1,20 @@
---- {}
+---
+# Digests of the upstream release assets, keyed by asset filename.
+#
+# How these were established (2026-09-22, restic 0.19.1):
+#   * SHA256SUMS and SHA256SUMS.asc downloaded from the GitHub release
+#   * the signature verified against restic's published release key
+#     CF8F18F2844575973F79D4E191A6868BD3F7A907 ("Alexander Neumann"), fetched
+#     from restic.net - a different domain from the assets, so forging both is
+#     materially harder than forging either
+#   * the linux_amd64 asset downloaded and hashed independently, and the result
+#     compared with the signed list
+#
+# The linux_arm64 entry comes from the signed list only; no arm64 host was
+# available to download and hash it independently.
+#
+# Bumping restic::version REQUIRES adding the entries for the new assets. The
+# class fails rather than installing a binary whose digest it does not know.
+restic::checksums:
+  restic_0.19.1_linux_amd64.bz2: 'f415415624dcc452f2a02b8c33641791a8c6d6d3b65bbb3543fcf9a25151585c'
+  restic_0.19.1_linux_arm64.bz2: 'a5f64aaab53d51e311fa3829124c5b703f2d14cf187d8640b6be3b2b49376465'
