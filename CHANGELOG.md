@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 0.4.0
+
+**Features**
+
+* Added `restic::metrics`: a systemd timer (every 15 minutes) runs `restic-metrics`, which lists
+  the snapshots of every repository (`restic snapshots --json --no-lock` through `restic-run`)
+  and writes the node_exporter textfile `restic.prom`: whether the repository could be read, the
+  number of snapshots, the time of the newest snapshot per repository and per tag, and the read
+  duration. A backup or an off-site copy that stopped running can now be alerted on; before, the
+  jobs only wrote to syslog. Python 3.7 or later; node_exporter itself is not managed.
+
 ## Release 0.3.0
 
 **Bugfixes**

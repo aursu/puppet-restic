@@ -112,10 +112,34 @@ restic::copy { 'mariadb-dr':
 }
 ```
 
+### Freshness metrics (node_exporter textfile collector)
+
+```puppet
+include restic::metrics
+```
+
+Every 15 minutes `restic-metrics` lists the snapshots of every repository in
+`/etc/restic` (`--no-lock`, so backups and prunes are never blocked) and writes
+`/var/lib/node_exporter/textfile/restic.prom`:
+
+| Metric | Labels |
+|---|---|
+| `restic_repository_up` | repository |
+| `restic_repository_snapshots` | repository |
+| `restic_repository_latest_snapshot_timestamp_seconds` | repository |
+| `restic_tag_latest_snapshot_timestamp_seconds` | repository, tag |
+| `restic_repository_read_duration_seconds` | repository |
+| `restic_metrics_collector_timestamp_seconds` | - |
+
+An alert such as `time() - restic_repository_latest_snapshot_timestamp_seconds > 2 * 3600`
+catches a backup that stopped. `restic copy` keeps the original snapshot time, so
+the same expression on the off-site repository catches a copy that stopped.
+The module does not install node_exporter; the textfile directory must exist.
+
 ## Reference
 
 See the in-manifest `@param` documentation on `restic`, `restic::repository`,
-`restic::job` and `restic::copy`.
+`restic::job`, `restic::copy` and `restic::metrics`.
 
 ## Limitations
 
